@@ -1,6 +1,6 @@
 name: Release
 
-# 推送 v* tag → Win → mac(arm64) → mac(x64) → Linux 串行打包，再发 GitHub Release
+# 推送 v* tag → Win / mac(arm64) / mac(x64) / Linux 并行打包，再发 GitHub Release
 # 只挂安装包；blockmap / latest*.yml 不上传。
 # Source code zip/tar.gz 是 GitHub 对每个 Release 自动生成的，无法关闭。
 on:
@@ -38,7 +38,6 @@ jobs:
 
   mac-arm64:
     name: macOS (Apple Silicon)
-    needs: win
     uses: ./.github/workflows/build-platform.yml
     with:
       platform: mac-arm64
@@ -49,7 +48,6 @@ jobs:
 
   mac-x64:
     name: macOS (Intel)
-    needs: mac-arm64
     uses: ./.github/workflows/build-platform.yml
     with:
       platform: mac-x64
@@ -61,7 +59,6 @@ jobs:
 
   linux:
     name: Linux
-    needs: mac-x64
     uses: ./.github/workflows/build-platform.yml
     with:
       platform: linux

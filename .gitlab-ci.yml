@@ -12,12 +12,10 @@
 #   Linux — shared runner
 #   Windows / macOS — 自备 runner，并打 tags: windows / macos
 
-# 打包优先级：Windows → macOS → Linux（串行，前一失败则后续不跑）
+# 打包：各端并行（同一 build stage）
 stages:
   - test
-  - build-win
-  - build-mac
-  - build-linux
+  - build
   - release
 
 variables:
@@ -51,7 +49,7 @@ test:
     - if: $CI_COMMIT_TAG
 
 build:windows:
-  stage: build-win
+  stage: build
   needs: [test]
   tags: [windows]
   variables:
@@ -74,11 +72,8 @@ build:windows:
   allow_failure: true
 
 build:macos:
-  stage: build-mac
-  needs:
-    - job: test
-    - job: build:windows
-      optional: true
+  stage: build
+  needs: [test]
   tags: [macos]
   variables:
     CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -101,13 +96,8 @@ build:macos:
 
 build:linux:
   extends: .pnpm_linux
-  stage: build-linux
-  needs:
-    - job: test
-    - job: build:windows
-      optional: true
-    - job: build:macos
-      optional: true
+  stage: build
+  needs: [test]
   script:
     - pnpm dist:linux
   artifacts:

@@ -54,7 +54,7 @@ pnpm dist:linux
 | **Package** | 手动 / 相关文件变更推到 `main` | Win + macOS + Linux Artifact |
 | **Release** | `v*` tag 或手动 | 三端打包 → **GitHub Release** |
 
-打包顺序（串行）：Windows → macOS arm64 → macOS x64（Intel）→ Linux。
+四端并行：Windows、macOS arm64、macOS x64（Intel）、Linux；Publish 等全部完成后再发 Release。
 
 - `windows-latest` → NSIS `.exe` + `.zip`
 - `macos-latest` → Apple Silicon `.dmg` / `.zip`

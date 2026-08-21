@@ -1,6 +1,6 @@
 name: Package
 
-# 手动或相关变更推到 main → 按 Win → mac(arm64) → mac(x64) → Linux 串行打包
+# 手动或相关变更推到 main → Win / mac(arm64) / mac(x64) / Linux 并行打包（仅 Artifact）
 on:
   workflow_dispatch:
   push:
@@ -35,7 +35,6 @@ jobs:
 
   mac-arm64:
     name: macOS (Apple Silicon)
-    needs: win
     uses: ./.github/workflows/build-platform.yml
     with:
       platform: mac-arm64
@@ -46,7 +45,6 @@ jobs:
 
   mac-x64:
     name: macOS (Intel)
-    needs: mac-arm64
     uses: ./.github/workflows/build-platform.yml
     with:
       platform: mac-x64
@@ -58,7 +56,6 @@ jobs:
 
   linux:
     name: Linux
-    needs: mac-x64
     uses: ./.github/workflows/build-platform.yml
     with:
       platform: linux
