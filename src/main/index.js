@@ -14,6 +14,12 @@ const { cleanupHarnessArtifacts } = require('./layout');
 const { ensureDesktopCorePlugin } = require('./ensure-plugin');
 const { createCoreBridge } = require('./core-bridge');
 const {
+  shellUpdateStatus,
+  checkShellUpdate,
+  downloadAndInstallShellUpdate,
+  isShellInstallPending,
+} = require('./shell-update');
+const {
   resolveNode,
   resolveDshEntry,
   dshHome,
@@ -332,6 +338,7 @@ function coreOverview() {
     harnessRoot: harnessRoot(),
     writableRoot: writableDesktopRoot(),
     dshHome: dshHome(),
+    shellUpdate: shellUpdateStatus(),
     harness: {
       dsh: harnessVer.dsh || null,
       node: harnessVer.node || null,
@@ -413,6 +420,42 @@ function coreCleanup() {
   };
 }
 
+async function coreRestartHarness() {
+  if (isUpdateInFlight()) {
+    throw new Error('更新进行中，请稍候');
+  }
+  if (!harness) {
+    throw new Error('Harness 尚未初始化');
+  }
+  sendUpdateLog({ stream: 'system', line: '正在重启 Harness…' });
+  await restartHarnessFresh();
+  sendUpdateLog({ stream: 'system', line: 'Harness 已重启' });
+  return coreOverview();
+}
+
+async function coreCheckShellUpdate() {
+  return checkShellUpdate({
+    onProgress: (p) => sendCoreProgress(p),
+    onLog: (entry) => sendUpdateLog(entry),
+  });
+}
+
+async function coreInstallShellUpdate() {
+  if (isUpdateInFlight()) {
+    throw new Error('核心更新进行中，请稍候');
+  }
+  sendUpdateLog({ stream: 'system', line: '准备安装桌面壳更新…' });
+  try {
+    await harness?.stop();
+  } catch (error) {
+    sendUpdateLog({ stream: 'stderr', line: `停止 Harness 时出错：${error.message || error}` });
+  }
+  return downloadAndInstallShellUpdate({
+    onProgress: (p) => sendCoreProgress(p),
+    onLog: (entry) => sendUpdateLog(entry),
+  });
+}
+
 function registerIpc() {
   ipcMain.handle('desktop:info', () => {
     const harnessVer = readVersionJson(harnessRoot()) || {};
@@ -431,6 +474,9 @@ function registerIpc() {
   ipcMain.handle('core:checkHarness', async () => checkHarnessUpdates());
   ipcMain.handle('core:installHarness', async (_event, version) => coreInstallHarness(version));
   ipcMain.handle('core:restoreSeed', async () => coreRestoreSeed());
+  ipcMain.handle('core:restartHarness', async () => coreRestartHarness());
+  ipcMain.handle('core:checkShellUpdate', async () => coreCheckShellUpdate());
+  ipcMain.handle('core:installShellUpdate', async () => coreInstallShellUpdate());
   ipcMain.handle('core:openPath', async (_event, which) => coreOpenPath(which));
   ipcMain.handle('core:diagnose', () => coreDiagnose());
   ipcMain.handle('core:cleanup', () => coreCleanup());
@@ -442,6 +488,9 @@ async function startCoreBridge() {
     checkHarness: () => checkHarnessUpdates(),
     installHarness: (version) => coreInstallHarness(version),
     restoreSeed: () => coreRestoreSeed(),
+    restartHarness: () => coreRestartHarness(),
+    checkShellUpdate: () => coreCheckShellUpdate(),
+    installShellUpdate: () => coreInstallShellUpdate(),
     openPath: (which) => coreOpenPath(which),
     diagnose: () => coreDiagnose(),
     cleanup: () => coreCleanup(),
@@ -478,6 +527,21 @@ if (!gotLock) {
 
   app.on('before-quit', async (event) => {
     if (quitting) return;
+    if (isShellInstallPending()) {
+      quitting = true;
+      try {
+        await harness?.stop();
+      } catch {
+        // ignore
+      }
+      try {
+        await coreBridge?.close();
+      } catch {
+        // ignore
+      }
+      // 不 preventDefault，让 electron-updater 完成安装器拉起
+      return;
+    }
     event.preventDefault();
     quitting = true;
     try {

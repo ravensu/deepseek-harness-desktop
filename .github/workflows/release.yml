@@ -1,7 +1,7 @@
 name: Release
 
 # 推送 v* tag → Win / mac(arm64) / mac(x64) / Linux 并行打包，再发 GitHub Release
-# 只挂安装包；blockmap / latest*.yml 不上传。
+# 挂安装包 + latest*.yml / blockmap（electron-updater）。
 # Source code zip/tar.gz 是 GitHub 对每个 Release 自动生成的，无法关闭。
 on:
   push:
@@ -83,22 +83,33 @@ jobs:
         with:
           path: dist-artifacts
           pattern: dsh-desktop-*
-          merge-multiple: true
+          # 保留各 job 子目录，避免同名 latest-mac.yml 互相覆盖
 
       - name: Collect release files
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p upload
-          # 只收集安装包
+          # 安装包扁平复制
           find dist-artifacts -type f \( \
             -name 'dsh-desktop-*.exe' -o \
             -name 'dsh-desktop-*.zip' -o \
             -name 'dsh-desktop-*.dmg' -o \
             -name 'dsh-desktop-*.AppImage' -o \
-            -name 'dsh-desktop-*.deb' \
+            -name 'dsh-desktop-*.deb' -o \
+            -name '*.blockmap' \
           \) -exec cp -v {} upload/ \;
-          echo "Files to publish:"
+          # updater yml 先按来源改名，再合并（mac arm/x64 各有一份 latest-mac.yml）
+          n=0
+          while IFS= read -r f; do
+            base=$(basename "$f")
+            cp -v "$f" "upload/${base%.yml}.$n.yml"
+            n=$((n + 1))
+          done < <(find dist-artifacts -type f \( -name 'latest*.yml' -o -name 'latest*.yaml' \) | sort)
+          echo "Before merge:"
+          find upload -type f | sort
+          node scripts/merge-update-yml.cjs upload
+          echo "After merge:"
           find upload -type f | sort
           count=$(find upload -type f | wc -l)
           if [ "$count" -lt 1 ]; then

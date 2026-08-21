@@ -7,8 +7,11 @@ nodeGypRebuild: false
 buildDependenciesFromSource: false
 electronDist: node_modules/electron/dist
 afterPack: scripts/after-pack.cjs
-# 发布走 softprops/action-gh-release，不要让 electron-builder 自动 publish
-publish: null
+# 仍用 --publish never 打本地/CI 包；配置 publish 以便生成 latest*.yml / app-update.yml
+publish:
+  provider: github
+  owner: ravensu
+  repo: deepseek-harness-desktop
 directories:
   output: release
   buildResources: build

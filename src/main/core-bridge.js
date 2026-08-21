@@ -125,6 +125,15 @@ function createCoreBridge(handlers) {
       if (url.pathname === '/restore' && req.method === 'POST') {
         return sendJson(res, 200, await handlers.restoreSeed());
       }
+      if (url.pathname === '/restart' && req.method === 'POST') {
+        return sendJson(res, 200, await handlers.restartHarness());
+      }
+      if (url.pathname === '/shell-check' && req.method === 'GET') {
+        return sendJson(res, 200, await handlers.checkShellUpdate());
+      }
+      if (url.pathname === '/shell-install' && req.method === 'POST') {
+        return sendJson(res, 200, await handlers.installShellUpdate());
+      }
       if (url.pathname === '/cleanup' && req.method === 'POST') {
         return sendJson(res, 200, await handlers.cleanup());
       }
@@ -189,6 +198,9 @@ function createCoreBridge(handlers) {
     checkHarness: () => invoke('/check'),
     installHarness: (version) => invoke('/install', 'POST', { version }),
     restoreSeed: () => invoke('/restore', 'POST', {}),
+    restartHarness: () => invoke('/restart', 'POST', {}),
+    checkShellUpdate: () => invoke('/shell-check'),
+    installShellUpdate: () => invoke('/shell-install', 'POST', {}),
     cleanup: () => invoke('/cleanup', 'POST', {}),
     diagnose: () => invoke('/diagnose'),
     openPath: (which) => invoke('/open-path', 'POST', { which }).then((r) => r.path),

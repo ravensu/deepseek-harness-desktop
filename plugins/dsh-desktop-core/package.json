@@ -1,6 +1,6 @@
 {
   "name": "dsh-desktop-core",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "DeepSeek Harness Desktop 核心管理：在官方设置中展示壳/运行时版本并触发更新（由桌面壳执行）。",
   "type": "module",
   "main": "lib/index.js",

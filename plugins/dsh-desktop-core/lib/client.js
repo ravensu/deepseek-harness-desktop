@@ -21,6 +21,7 @@ window.__ModuleLoader__.load({
       path: '运行时目录',
       data: '数据目录',
       check: '检查更新',
+      restart: '重启引擎',
       restore: '重新安装默认版本',
       cleanup: '清理旧版本缓存',
       diagnose: '运行诊断',
@@ -35,7 +36,14 @@ window.__ModuleLoader__.load({
       log: '更新日志',
       confirmInstall: '将停止 Harness、替换 sidecar 并重启。用户数据保留。继续？',
       confirmRestore: '将重新安装默认 dsh 版本（打包版从 npm；开发态可有本地种子）。当前运行时会先移到 harness.prev。',
-      shellNote: '桌面壳需重装安装包更新；此处仅显示版本。首次启动会从网络安装引擎。',
+      restartOk: '引擎已重启',
+      shellNote: '可从 GitHub Release 检查并下载安装桌面壳；macOS 未签名时系统可能额外提示。',
+      checkShell: '检查壳更新',
+      installShell: '下载并安装壳',
+      shellLatest: '远端',
+      shellUpToDate: '壳已是最新',
+      shellDev: '开发模式无法更新壳（需安装包）',
+      confirmShellInstall: '将下载新版桌面壳并退出安装。Harness 会先停止，用户数据保留。继续？',
       updates: '可用版本',
       probing: '正在连接桌面壳…',
     };
@@ -53,6 +61,7 @@ window.__ModuleLoader__.load({
       path: 'Runtime path',
       data: 'Data path',
       check: 'Check updates',
+      restart: 'Restart engine',
       restore: 'Reinstall default version',
       cleanup: 'Clean old caches',
       diagnose: 'Run diagnostics',
@@ -67,7 +76,14 @@ window.__ModuleLoader__.load({
       log: 'Update log',
       confirmInstall: 'Harness will stop, the sidecar will be replaced, then restart. User data is kept. Continue?',
       confirmRestore: 'Reinstall the default dsh version from npm (or local seed if present). The current tree moves to harness.prev.',
-      shellNote: 'Update the desktop shell by reinstalling the app; this page only shows its version. First launch installs the engine from the network.',
+      restartOk: 'Engine restarted',
+      shellNote: 'Checks GitHub Releases and can download/install the desktop shell. Unsigned macOS builds may trigger Gatekeeper prompts.',
+      checkShell: 'Check shell update',
+      installShell: 'Download & install shell',
+      shellLatest: 'Remote',
+      shellUpToDate: 'Shell is up to date',
+      shellDev: 'Dev mode cannot update the shell (need a packaged build)',
+      confirmShellInstall: 'Download the new shell and quit to install. Harness stops first; user data is kept. Continue?',
       updates: 'Available versions',
       probing: 'Connecting to the desktop shell…',
     };
@@ -181,6 +197,7 @@ window.__ModuleLoader__.load({
       const [bridge, setBridge] = React.useState(() => getBridge());
       const [overview, setOverview] = React.useState(null);
       const [targets, setTargets] = React.useState(null);
+      const [shellCheck, setShellCheck] = React.useState(null);
       const [registry, setRegistry] = React.useState('');
       const [busy, setBusy] = React.useState(false);
       const [status, setStatus] = React.useState({ text: '', kind: '' });
@@ -277,6 +294,56 @@ window.__ModuleLoader__.load({
         } catch (error) {
           setStatus({ text: String(error.message || error), kind: 'error' });
         } finally {
+          setBusy(false);
+        }
+      }
+
+      async function restart() {
+        if (!bridge || busy) return;
+        setBusy(true);
+        setStatus({ text: t('restart') + '…', kind: 'busy' });
+        try {
+          const next = await bridge.restartHarness();
+          if (next) setOverview(next);
+          else await refresh();
+          setStatus({ text: t('restartOk'), kind: 'ok' });
+        } catch (error) {
+          setStatus({ text: String(error.message || error), kind: 'error' });
+          await refresh().catch(() => {});
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function checkShell() {
+        if (!bridge || busy) return;
+        setBusy(true);
+        setStatus({ text: t('checkShell') + '…', kind: 'busy' });
+        try {
+          const result = await bridge.checkShellUpdate();
+          setShellCheck(result);
+          setStatus({
+            text: result.message || (result.available ? t('hasUpdate') : t('shellUpToDate')),
+            kind: result.reason === 'dev' ? '' : result.available ? 'warn' : 'ok',
+          });
+        } catch (error) {
+          setStatus({ text: String(error.message || error), kind: 'error' });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function installShell() {
+        if (!bridge || busy) return;
+        if (!window.confirm(t('confirmShellInstall'))) return;
+        setBusy(true);
+        setLog('');
+        setStatus({ text: t('installShell') + '…', kind: 'busy' });
+        try {
+          await bridge.installShellUpdate();
+          setStatus({ text: t('installShell'), kind: 'ok' });
+        } catch (error) {
+          setStatus({ text: String(error.message || error), kind: 'error' });
           setBusy(false);
         }
       }
@@ -387,6 +454,13 @@ window.__ModuleLoader__.load({
                       }),
                       jsx('button', {
                         type: 'button',
+                        className: 'DDC_btn DDC_btnPrimary',
+                        disabled: busy,
+                        onClick: () => void restart(),
+                        children: t('restart'),
+                      }),
+                      jsx('button', {
+                        type: 'button',
                         className: 'DDC_btn',
                         disabled: busy,
                         onClick: () => void restore(),
@@ -431,7 +505,36 @@ window.__ModuleLoader__.load({
                   jsx('p', { className: 'DDC_intro', children: t('shellNote') }),
                   jsxs('div', {
                     className: 'DDC_fields',
-                    children: [field(t('shell'), overview?.shellVersion ? `v${overview.shellVersion}` : '—')],
+                    children: [
+                      field(t('shell'), overview?.shellVersion ? `v${overview.shellVersion}` : '—'),
+                      field(
+                        t('shellLatest'),
+                        shellCheck?.latestVersion
+                          ? `v${shellCheck.latestVersion}`
+                          : shellCheck?.reason === 'dev'
+                            ? t('shellDev')
+                            : '—',
+                      ),
+                    ],
+                  }),
+                  jsxs('div', {
+                    className: 'DDC_actions',
+                    children: [
+                      jsx('button', {
+                        type: 'button',
+                        className: 'DDC_btn DDC_btnPrimary',
+                        disabled: busy,
+                        onClick: () => void checkShell(),
+                        children: t('checkShell'),
+                      }),
+                      jsx('button', {
+                        type: 'button',
+                        className: 'DDC_btn DDC_btnPrimary',
+                        disabled: busy || !shellCheck?.available,
+                        onClick: () => void installShell(),
+                        children: t('installShell'),
+                      }),
+                    ],
                   }),
                 ],
               }),

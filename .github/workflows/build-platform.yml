@@ -112,8 +112,7 @@ jobs:
           echo "::group::release tree"
           find release -maxdepth 2 -type f | sort || true
           echo "::endgroup::"
-          # 只认安装包，忽略 blockmap / latest*.yml
-          # 不用 mapfile：macOS 自带 bash 3.2 没有该内建命令
+          # 安装包 + electron-updater 元数据（latest*.yml / blockmap）
           packs=()
           while IFS= read -r f; do
             packs+=("$f")
@@ -133,12 +132,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifact_name }}
-          # 只上传安装包，不带 blockmap / latest*.yml
           path: |
             release/dsh-desktop-*.exe
             release/dsh-desktop-*.zip
             release/dsh-desktop-*.dmg
             release/dsh-desktop-*.AppImage
             release/dsh-desktop-*.deb
+            release/latest*.yml
+            release/*.blockmap
           if-no-files-found: error
           retention-days: ${{ inputs.retention_days }}

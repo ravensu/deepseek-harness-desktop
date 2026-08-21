@@ -61,7 +61,9 @@ pnpm dist:linux
 - `macos-15-intel` → Intel `.dmg` / `.zip`
 - `ubuntu-22.04` → `.AppImage` + `.deb`
 
-Release 只挂安装包（不挂 `blockmap` / `latest*.yml`）。GitHub 会自动附带 Source code，无法关闭。
+Release 挂安装包，以及 `latest*.yml` / `.blockmap`（给 `electron-updater` 壳更新用）。GitHub 会自动附带 Source code，无法关闭。
+
+设置 → **核心管理** 可检查/安装桌面壳更新（需安装包环境；开发态 `pnpm start` 不可用）。
 
 ```bash
 git tag v0.1.0

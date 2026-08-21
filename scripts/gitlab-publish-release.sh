@@ -7,10 +7,11 @@ mkdir -p upload
 rm -f links.raw
 
 shopt -s nullglob
-# 只上传安装包（不要 blockmap / latest*.yml）
+# 安装包 + electron-updater 元数据
 for f in release/dsh-desktop-*.exe release/dsh-desktop-*.zip \
   release/dsh-desktop-*.dmg release/dsh-desktop-*.AppImage \
-  release/dsh-desktop-*.deb; do
+  release/dsh-desktop-*.deb release/latest*.yml release/latest*.yaml \
+  release/*.blockmap; do
   [ -f "$f" ] || continue
   cp -v "$f" upload/
 done
