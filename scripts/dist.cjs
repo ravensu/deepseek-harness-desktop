@@ -32,7 +32,7 @@ for (const flag of flags) {
   }
 }
 
-const result = spawnSync('pnpm', ['exec', 'electron-builder', ...flags], {
+const result = spawnSync('pnpm', ['exec', 'electron-builder', ...flags, '--publish', 'never'], {
   cwd: path.join(__dirname, '..'),
   stdio: 'inherit',
   shell: process.platform === 'win32',
