@@ -53,7 +53,8 @@ jobs:
     uses: ./.github/workflows/build-platform.yml
     with:
       platform: mac-x64
-      os: macos-13
+      # macos-13 已退役；macos-15-intel 是标准 runner 上的 Intel x64 替代
+      os: macos-15-intel
       script: dist:mac:x64
       artifact_name: dsh-desktop-mac-x64
       retention_days: 30

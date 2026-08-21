@@ -58,7 +58,7 @@ pnpm dist:linux
 
 - `windows-latest` → NSIS `.exe` + `.zip`
 - `macos-latest` → Apple Silicon `.dmg` / `.zip`
-- `macos-13` → Intel `.dmg` / `.zip`
+- `macos-15-intel` → Intel `.dmg` / `.zip`
 - `ubuntu-22.04` → `.AppImage` + `.deb`
 
 Release 只挂安装包（不挂 `blockmap` / `latest*.yml`）。GitHub 会自动附带 Source code，无法关闭。

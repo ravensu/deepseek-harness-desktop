@@ -113,12 +113,16 @@ jobs:
           find release -maxdepth 2 -type f | sort || true
           echo "::endgroup::"
           # 只认安装包，忽略 blockmap / latest*.yml
-          mapfile -t packs < <(find release -maxdepth 1 -type f \( \
+          # 不用 mapfile：macOS 自带 bash 3.2 没有该内建命令
+          packs=()
+          while IFS= read -r f; do
+            packs+=("$f")
+          done < <(find release -maxdepth 1 -type f \( \
             -name 'dsh-desktop-*.exe' -o \
             -name 'dsh-desktop-*.zip' -o \
             -name 'dsh-desktop-*.dmg' -o \
             -name 'dsh-desktop-*.AppImage' -o \
-            -name 'dsh-desktop-*.deb' \))
+            -name 'dsh-desktop-*.deb' \) | sort)
           if [ "${#packs[@]}" -lt 1 ]; then
             echo "release/ 下没有安装包" >&2
             exit 1
