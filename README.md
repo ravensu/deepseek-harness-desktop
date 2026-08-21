@@ -46,23 +46,27 @@ pnpm dist:linux
 
 ## CI/CD 自动发版
 
-推送符合 `v*` 的 tag 即可触发三端打包并发布：
+### GitHub Actions
+
+| 工作流 | 触发 | 产物 |
+|---|---|---|
+| **CI** | push / PR | 单元测试 |
+| **Package** | 手动 / 相关文件变更推到 `main` | Win + macOS + Linux Artifact |
+| **Release** | `v*` tag 或手动 | 三端打包 → **GitHub Release** |
+
+三端矩阵：
+
+- `windows-latest` → NSIS `.exe` + `.zip`
+- `macos-latest` → `.dmg` + `.zip`（当前为 Apple Silicon）
+- `ubuntu-22.04` → `.AppImage` + `.deb`
 
 ```bash
-# 1. 确认 package.json 里 dshDesktop.seedDsh 等配置无误
-# 2. 打 tag（版本号会同步进安装包名）
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-### GitHub
-
-| 工作流 | 触发 | 作用 |
-|---|---|---|
-| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | push / PR | 跑测试 |
-| [`.github/workflows/release.yml`](.github/workflows/release.yml) | `v*` tag 或手动 | Win/macOS/Linux 打包 → GitHub Release |
-
-手动：Actions → **Release** → Run workflow（可勾选发布 Release）。
+手动只打包不发版：Actions → **Package** → Run workflow。  
+手动打包并发版：Actions → **Release** → 勾选 publish，填写 `v0.1.0`。
 
 ### GitLab
 

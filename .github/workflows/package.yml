@@ -1,28 +1,25 @@
-name: Release
+name: Package
 
-# 推送 v* tag → 三端打包并发布 GitHub Release
-# 也可手动 Run workflow（勾选 publish_release 并填写 release_tag）
+# 手动或推送后打 Win / macOS / Linux 三端产物（上传 Artifact，默认不发 Release）
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
-    inputs:
-      publish_release:
-        description: '打包完成后创建/更新 GitHub Release'
-        type: boolean
-        default: true
-      release_tag:
-        description: 'Release tag（如 v0.1.0）；在 tag 上触发时可留空'
-        required: false
-        default: ''
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/package.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'electron-builder.yml'
+      - 'src/**'
+      - 'plugins/**'
+      - 'scripts/**'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  group: package-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -117,68 +114,7 @@ jobs:
       - name: Upload ${{ matrix.platform }} artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dsh-desktop-${{ matrix.platform }}
+          name: dsh-desktop-${{ matrix.platform }}-${{ github.sha }}
           path: ${{ matrix.artifact_glob }}
           if-no-files-found: error
-          retention-days: 30
-
-  publish:
-    name: Publish GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    if: >
-      startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download all platform artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist-artifacts
-          pattern: dsh-desktop-*
-          merge-multiple: true
-
-      - name: Collect release files
-        id: files
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p upload
-          find dist-artifacts -type f \
-            \( -name 'dsh-desktop-*' -o -name 'latest*.yml' -o -name '*.blockmap' \) \
-            -exec cp -v {} upload/ \;
-          echo "Files to publish:"
-          find upload -type f | sort
-          count=$(find upload -type f | wc -l)
-          if [ "$count" -lt 1 ]; then
-            echo "没有可发布的产物" >&2
-            exit 1
-          fi
-
-      - name: Resolve release tag
-        id: tag
-        shell: bash
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          elif [[ -n "${{ inputs.release_tag }}" ]]; then
-            echo "name=${{ inputs.release_tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "缺少 release tag：请在 v* tag 上触发，或填写 release_tag" >&2
-            exit 1
-          fi
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.name }}
-          name: DeepSeek Harness Desktop ${{ steps.tag.outputs.name }}
-          draft: false
-          prerelease: ${{ contains(steps.tag.outputs.name, '-') }}
-          generate_release_notes: true
-          files: upload/*
-          fail_on_unmatched_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          retention-days: 14

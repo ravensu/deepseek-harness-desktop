@@ -41,3 +41,5 @@ linux:
   artifactName: ${name}-${version}-linux-${arch}.${ext}
   category: Development
   maintainer: dsh-desktop
+# electron-builder 26：Ubuntu 24 CI 上构建 AppImage 需要 fuse2（或升级到 27 默认 static runtime）
+# 这里不强制 toolsets，由 workflow 安装 libfuse2。

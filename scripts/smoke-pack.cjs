@@ -4,14 +4,32 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+function firstExisting(candidates) {
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
+
 function packagedResources(outDir, platform) {
   if (platform === 'darwin') {
-    return path.join(outDir, 'mac', 'DeepSeek Harness.app', 'Contents', 'Resources');
+    return firstExisting([
+      path.join(outDir, 'mac-arm64', 'DeepSeek Harness.app', 'Contents', 'Resources'),
+      path.join(outDir, 'mac', 'DeepSeek Harness.app', 'Contents', 'Resources'),
+      path.join(outDir, 'mac-x64', 'DeepSeek Harness.app', 'Contents', 'Resources'),
+    ]);
   }
   if (platform === 'linux') {
-    return path.join(outDir, 'linux-unpacked', 'resources');
+    return firstExisting([
+      path.join(outDir, 'linux-unpacked', 'resources'),
+      path.join(outDir, 'linux-arm64-unpacked', 'resources'),
+      path.join(outDir, 'linux-x64-unpacked', 'resources'),
+    ]);
   }
-  return path.join(outDir, 'win-unpacked', 'resources');
+  return firstExisting([
+    path.join(outDir, 'win-unpacked', 'resources'),
+    path.join(outDir, 'win-arm64-unpacked', 'resources'),
+  ]);
 }
 
 function smoke(outDir) {
