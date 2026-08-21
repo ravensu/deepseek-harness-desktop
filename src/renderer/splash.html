@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" />
+    <title>DeepSeek Harness</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #111;
+        color: #e8e8e8;
+        font: 14px/1.5 "Segoe UI", sans-serif;
+      }
+      main {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 48px;
+        box-sizing: border-box;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      #phase {
+        color: #8ab4f8;
+        margin-bottom: 16px;
+      }
+      #log {
+        flex: 0 1 280px;
+        overflow: auto;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        padding: 12px;
+        white-space: pre-wrap;
+        color: #b0b0b0;
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DeepSeek Harness</h1>
+      <div id="phase">正在启动本地运行时…</div>
+      <pre id="log"></pre>
+    </main>
+    <script>
+      const phaseEl = document.getElementById('phase');
+      const logEl = document.getElementById('log');
+
+      function append(text) {
+        logEl.textContent += text.endsWith('\n') ? text : text + '\n';
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      window.dshDesktop.info().then((info) => {
+        if (info.logs) {
+          for (const entry of info.logs) {
+            append(typeof entry === 'string' ? entry : `[${entry.stream}] ${entry.line}`);
+          }
+        }
+      });
+
+      window.dshDesktop.onStatus((status) => {
+        if (status.phase === 'ready') phaseEl.textContent = '已就绪，正在打开界面…';
+        else if (status.phase === 'error') phaseEl.textContent = status.message || '启动失败';
+        else phaseEl.textContent = status.message || status.line || '正在启动本地运行时…';
+      });
+
+      window.dshDesktop.onLog((entry) => {
+        append(typeof entry === 'string' ? entry : `[${entry.stream}] ${entry.line}`);
+      });
+    </script>
+  </body>
+</html>

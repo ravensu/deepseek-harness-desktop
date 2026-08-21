@@ -1,0 +1,31 @@
+{
+  "name": "dsh-desktop",
+  "productName": "DeepSeek Harness",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness 桌面宿主：内嵌官方 Web UI。",
+  "main": "src/main/index.js",
+  "author": "dsh-desktop",
+  "license": "MIT",
+  "packageManager": "pnpm@11.22.0",
+  "dshDesktop": {
+    "seedDsh": "0.1.0-rc.7"
+  },
+  "scripts": {
+    "stage:node": "node scripts/stage-node.cjs",
+    "stage:harness": "node scripts/stage-harness.cjs",
+    "prestart": "node scripts/ensure-harness-staged.cjs",
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "smoke:runtime": "node scripts/smoke-runtime.cjs",
+    "sync:version": "node scripts/sync-version-from-ci.cjs",
+    "dist": "node scripts/dist.cjs",
+    "dist:win": "node scripts/dist.cjs --win",
+    "dist:mac": "node scripts/dist.cjs --mac",
+    "dist:linux": "node scripts/dist.cjs --linux"
+  },
+  "devDependencies": {
+    "electron": "^37.3.1",
+    "electron-builder": "^26.15.3",
+    "pnpm": "^11.22.0"
+  }
+}

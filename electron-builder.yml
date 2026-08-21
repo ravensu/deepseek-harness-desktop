@@ -1,0 +1,43 @@
+appId: com.dsh.desktop
+productName: DeepSeek Harness
+copyright: Copyright © DeepSeek Harness Desktop
+asar: true
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+electronDist: node_modules/electron/dist
+afterPack: scripts/after-pack.cjs
+directories:
+  output: release
+  buildResources: build
+files:
+  - package.json
+  - src/**/*
+  - plugins/dsh-desktop-core/**/*
+  - "!**/{README,CHANGELOG,CHANGES,changelog,readme}*"
+win:
+  target:
+    - nsis
+    - zip
+  artifactName: ${name}-${version}-win-${arch}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+mac:
+  target:
+    - dmg
+    - zip
+  artifactName: ${name}-${version}-mac-${arch}.${ext}
+  category: public.app-category.developer-tools
+  hardenedRuntime: false
+  gatekeeperAssess: false
+linux:
+  target:
+    - AppImage
+    - deb
+  artifactName: ${name}-${version}-linux-${arch}.${ext}
+  category: Development
+  maintainer: dsh-desktop

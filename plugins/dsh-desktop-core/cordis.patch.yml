@@ -1,0 +1,4 @@
+# DeepSeek Harness Desktop — core management settings section.
+- insert:
+    - id: desktop-core
+      name: dsh-desktop-core

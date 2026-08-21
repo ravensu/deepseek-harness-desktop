@@ -1,0 +1,30 @@
+{
+  "name": "dsh-desktop-core",
+  "version": "0.1.3",
+  "description": "DeepSeek Harness Desktop 核心管理：在官方设置中展示壳/运行时版本并触发更新（由桌面壳执行）。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "package.json"
+  ]
+}
