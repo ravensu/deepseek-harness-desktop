@@ -25,6 +25,8 @@ importers:
         specifier: ^11.22.0
         version: 11.22.0
 
+  plugins/desktop/dsh-desktop-core: {}
+
 packages:
 
   '@electron/asar@3.2.1':

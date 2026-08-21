@@ -12,6 +12,15 @@
 
 安装包**不内置**完整 Harness，只带 `bootstrap-node`（Node + pnpm）。**首次启动**按 `package.json` → `dshDesktop.seedDsh` 从 npm 安装核心。
 
+## 插件开发（monorepo）
+
+| 类型 | 目录 | 说明 |
+|---|---|---|
+| 壳专用 | `plugins/desktop/*` | 可依赖桌面桥；随壳打包，启动时写入 profile |
+| 纯 dsh | `plugins/harness/*` | 标准 Harness 插件；`pnpm plugin:link` 链到本地 profile |
+
+详见 [plugins/README.md](plugins/README.md)。**不用 submodule/subtree**，除非插件已独立发版。
+
 ## 本地开发
 
 需要 Node.js 22+ 与 pnpm：

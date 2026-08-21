@@ -1,4 +1,7 @@
 nodeLinker: hoisted
+packages:
+  - 'plugins/desktop/*'
+  - 'plugins/harness/*'
 allowBuilds:
   electron: true
   electron-winstaller: true

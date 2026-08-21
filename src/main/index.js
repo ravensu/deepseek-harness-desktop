@@ -11,7 +11,7 @@ const {
   isUpdateInFlight,
 } = require('./update');
 const { cleanupHarnessArtifacts } = require('./layout');
-const { ensureDesktopCorePlugin } = require('./ensure-plugin');
+const { ensureDesktopPlugins } = require('./ensure-plugin');
 const { createCoreBridge } = require('./core-bridge');
 const {
   shellUpdateStatus,
@@ -103,16 +103,25 @@ async function createRuntime() {
       sendUpdateLog(entry);
     },
   );
-  const pluginResult = ensureDesktopCorePlugin(dshHome());
+  const pluginResult = ensureDesktopPlugins(dshHome());
   if (pluginResult.ok) {
-    pushLog({
-      stream: 'system',
-      line: pluginResult.changed
-        ? `已装入设置插件 ${pluginResult.plugin}@${pluginResult.version}`
-        : `设置插件 ${pluginResult.plugin}@${pluginResult.version} 已就绪`,
-    });
+    const changed = (pluginResult.results || []).filter((r) => r.changed);
+    for (const r of changed) {
+      pushLog({
+        stream: 'system',
+        line: `已同步桌面插件 ${r.plugin}@${r.version}`,
+      });
+    }
+    if (!changed.length && pluginResult.results?.length) {
+      pushLog({
+        stream: 'system',
+        line: `桌面插件已就绪：${pluginResult.results.map((r) => r.plugin).join(', ')}`,
+      });
+    }
   } else {
-    pushLog({ stream: 'system', line: `设置插件未装入: ${pluginResult.reason}` });
+    for (const f of pluginResult.failed || []) {
+      pushLog({ stream: 'stderr', line: `桌面插件同步失败: ${f.reason || f.plugin}` });
+    }
   }
   const options = runtimeOptions();
   harness = new HarnessSupervisor(options);

@@ -21,6 +21,7 @@
     "start": "electron .",
     "test": "node --test test/*.test.js",
     "smoke:runtime": "node scripts/smoke-runtime.cjs",
+    "plugin:link": "node scripts/link-harness-plugins.cjs",
     "sync:version": "node scripts/sync-version-from-ci.cjs",
     "dist": "node scripts/dist.cjs",
     "dist:win": "node scripts/dist.cjs --win",

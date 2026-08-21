@@ -5,8 +5,31 @@ const path = require('path');
 
 const PLUGIN_NAME = 'dsh-desktop-core';
 
-function pluginSourceRoot() {
-  return path.join(__dirname, '..', '..', 'plugins', PLUGIN_NAME);
+function repoRoot() {
+  return path.join(__dirname, '..', '..');
+}
+
+/** 壳专用插件根目录：plugins/desktop/<name> */
+function desktopPluginsRoot() {
+  return path.join(repoRoot(), 'plugins', 'desktop');
+}
+
+/** 纯 dsh 插件根目录：plugins/harness/<name> */
+function harnessPluginsRoot() {
+  return path.join(repoRoot(), 'plugins', 'harness');
+}
+
+function pluginSourceRoot(name = PLUGIN_NAME) {
+  return path.join(desktopPluginsRoot(), name);
+}
+
+function listPluginDirs(root) {
+  if (!fs.existsSync(root)) return [];
+  return fs
+    .readdirSync(root, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
+    .map((d) => d.name)
+    .filter((name) => fs.existsSync(path.join(root, name, 'package.json')));
 }
 
 function copyDirSync(src, dest) {
@@ -30,19 +53,7 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-/**
- * Install / refresh the desktop core plugin into the web profile so it appears
- * under official Settings. Returns whether the profile was modified.
- */
-function ensureDesktopCorePlugin(dshHome) {
-  const source = pluginSourceRoot();
-  if (!fs.existsSync(path.join(source, 'package.json'))) {
-    return { ok: false, reason: `plugin source missing: ${source}` };
-  }
-
-  const profileDir = path.join(dshHome, 'profiles', 'web');
-  fs.mkdirSync(profileDir, { recursive: true });
-
+function ensureProfilePackage(profileDir) {
   const pkgPath = path.join(profileDir, 'package.json');
   let pkg;
   if (fs.existsSync(pkgPath)) {
@@ -55,17 +66,35 @@ function ensureDesktopCorePlugin(dshHome) {
       dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] } },
     };
   }
-
   pkg.dependencies = pkg.dependencies || {};
   pkg.dsh = pkg.dsh || {};
   pkg.dsh.profile = pkg.dsh.profile || {};
-  const bundles = Array.isArray(pkg.dsh.profile.bundles) ? [...pkg.dsh.profile.bundles] : [];
+  if (!Array.isArray(pkg.dsh.profile.bundles)) {
+    pkg.dsh.profile.bundles = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'];
+  }
+  return { pkgPath, pkg };
+}
 
-  const dest = path.join(profileDir, 'node_modules', PLUGIN_NAME);
+/**
+ * Install / refresh one desktop plugin into the web profile.
+ */
+function ensureDesktopPlugin(dshHome, pluginName) {
+  const source = pluginSourceRoot(pluginName);
+  if (!fs.existsSync(path.join(source, 'package.json'))) {
+    return { ok: false, reason: `plugin source missing: ${source}` };
+  }
+
+  const profileDir = path.join(dshHome, 'profiles', 'web');
+  fs.mkdirSync(profileDir, { recursive: true });
+  const { pkgPath, pkg } = ensureProfilePackage(profileDir);
+  const bundles = [...pkg.dsh.profile.bundles];
+
+  const dest = path.join(profileDir, 'node_modules', pluginName);
   const srcPkg = readJson(path.join(source, 'package.json'));
   const destPkgPath = path.join(dest, 'package.json');
   const destVersion = fs.existsSync(destPkgPath) ? readJson(destPkgPath).version : null;
-  const needCopy = destVersion !== srcPkg.version || !fs.existsSync(path.join(dest, 'lib', 'client.js'));
+  const needCopy =
+    destVersion !== srcPkg.version || !fs.existsSync(path.join(dest, 'lib', 'client.js'));
 
   let changed = false;
   if (needCopy) {
@@ -74,18 +103,17 @@ function ensureDesktopCorePlugin(dshHome) {
     changed = true;
   }
 
-  if (pkg.dependencies[PLUGIN_NAME] !== srcPkg.version) {
-    pkg.dependencies[PLUGIN_NAME] = srcPkg.version;
+  if (pkg.dependencies[pluginName] !== srcPkg.version) {
+    pkg.dependencies[pluginName] = srcPkg.version;
     changed = true;
   }
 
-  if (!bundles.includes(PLUGIN_NAME)) {
-    // Keep official base/app first; append desktop core near the front of extras.
+  if (!bundles.includes(pluginName)) {
     const baseIdx = bundles.indexOf('@deepseek-ai/dsh-web-app');
     if (baseIdx >= 0) {
-      bundles.splice(baseIdx + 1, 0, PLUGIN_NAME);
+      bundles.splice(baseIdx + 1, 0, pluginName);
     } else {
-      bundles.push(PLUGIN_NAME);
+      bundles.push(pluginName);
     }
     pkg.dsh.profile.bundles = bundles;
     changed = true;
@@ -98,14 +126,40 @@ function ensureDesktopCorePlugin(dshHome) {
   return {
     ok: true,
     changed,
-    plugin: PLUGIN_NAME,
+    plugin: pluginName,
     version: srcPkg.version,
     dest,
   };
 }
 
+/**
+ * Refresh all plugins under plugins/desktop into the profile.
+ * Keeps ensureDesktopCorePlugin() as a stable alias for the core plugin.
+ */
+function ensureDesktopPlugins(dshHome) {
+  const names = listPluginDirs(desktopPluginsRoot());
+  const results = names.map((name) => ensureDesktopPlugin(dshHome, name));
+  const changed = results.some((r) => r.ok && r.changed);
+  const failed = results.filter((r) => !r.ok);
+  return {
+    ok: failed.length === 0,
+    changed,
+    results,
+    failed,
+  };
+}
+
+function ensureDesktopCorePlugin(dshHome) {
+  return ensureDesktopPlugin(dshHome, PLUGIN_NAME);
+}
+
 module.exports = {
   PLUGIN_NAME,
   ensureDesktopCorePlugin,
+  ensureDesktopPlugin,
+  ensureDesktopPlugins,
   pluginSourceRoot,
+  desktopPluginsRoot,
+  harnessPluginsRoot,
+  listPluginDirs,
 };

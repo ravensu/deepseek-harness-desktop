@@ -18,7 +18,7 @@ directories:
 files:
   - package.json
   - src/**/*
-  - plugins/dsh-desktop-core/**/*
+  - plugins/desktop/**/*
   - "!**/{README,CHANGELOG,CHANGES,changelog,readme}*"
 win:
   target:
