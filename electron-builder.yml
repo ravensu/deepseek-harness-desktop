@@ -5,7 +5,7 @@ asar: true
 npmRebuild: false
 nodeGypRebuild: false
 buildDependenciesFromSource: false
-electronDist: node_modules/electron/dist
+# 不写死 electronDist：CI / pnpm 下 dist 路径不稳定，交给 electron-builder 解析
 afterPack: scripts/after-pack.cjs
 directories:
   output: release

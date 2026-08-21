@@ -46,8 +46,8 @@ if (result.error) {
   console.error(result.error);
   process.exit(1);
 }
-if (result.status) {
-  process.exit(result.status);
+if (result.status !== 0) {
+  process.exit(result.status == null ? 1 : result.status);
 }
 
 try {

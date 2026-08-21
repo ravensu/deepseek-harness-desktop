@@ -36,3 +36,20 @@ test('sync-version-from-ci rejects invalid versions', () => {
   });
   assert.notEqual(result.status, 0);
 });
+
+test('requiring sync-version must not exit the parent process', () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      '-e',
+      `require(${JSON.stringify(script)}); console.log('PARENT_STILL_ALIVE');`,
+    ],
+    {
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, DSH_RELEASE_VERSION: '', GITHUB_REF_TYPE: '', CI_COMMIT_TAG: '' },
+      encoding: 'utf8',
+    },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /PARENT_STILL_ALIVE/);
+});

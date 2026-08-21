@@ -88,6 +88,19 @@ jobs:
       - name: Build ${{ matrix.platform }}
         run: pnpm ${{ matrix.script }}
 
+      - name: Dump release on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "::group::release tree"
+          find release -maxdepth 3 \( -type f -o -type d \) 2>/dev/null | sort || true
+          echo "::endgroup::"
+          if [ -f release/builder-debug.yml ]; then
+            echo "::group::builder-debug.yml"
+            cat release/builder-debug.yml
+            echo "::endgroup::"
+          fi
+
       - name: Verify release artifacts
         shell: bash
         run: |
