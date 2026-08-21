@@ -86,19 +86,34 @@ jobs:
         run: pnpm test
 
       - name: Build ${{ matrix.platform }}
-        run: pnpm ${{ matrix.script }}
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm ${{ matrix.script }} 2>&1 | tee "${RUNNER_TEMP}/dsh-build.log"
 
-      - name: Dump release on failure
+      - name: Surface build failure
         if: failure()
         shell: bash
         run: |
-          echo "::group::release tree"
-          find release -maxdepth 3 \( -type f -o -type d \) 2>/dev/null | sort || true
-          echo "::endgroup::"
-          if [ -f release/builder-debug.yml ]; then
-            echo "::group::builder-debug.yml"
-            cat release/builder-debug.yml
-            echo "::endgroup::"
+          log="${RUNNER_TEMP}/dsh-build.log"
+          {
+            echo "## Build failure (${{ matrix.platform }})"
+            echo
+            echo '```'
+            if [ -f "$log" ]; then tail -n 120 "$log"; else echo "(no build log)"; fi
+            echo '```'
+            echo
+            echo '### release/'
+            echo '```'
+            find release -maxdepth 3 \( -type f -o -type d \) 2>/dev/null | sort || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "$log" ]; then
+            grep -E '⨯|Error:|ELIFECYCLE|ENOENT|Cannot find|missing|afterPack:|pack smoke:|stage-node:' "$log" \
+              | tail -n 30 \
+              | while IFS= read -r line; do
+                  echo "::error::${line}"
+                done
           fi
 
       - name: Verify release artifacts

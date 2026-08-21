@@ -5,7 +5,7 @@ asar: true
 npmRebuild: false
 nodeGypRebuild: false
 buildDependenciesFromSource: false
-# 不写死 electronDist：CI / pnpm 下 dist 路径不稳定，交给 electron-builder 解析
+electronDist: node_modules/electron/dist
 afterPack: scripts/after-pack.cjs
 directories:
   output: release
@@ -34,6 +34,7 @@ mac:
   category: public.app-category.developer-tools
   hardenedRuntime: false
   gatekeeperAssess: false
+  identity: null
 linux:
   target:
     - AppImage
@@ -41,5 +42,3 @@ linux:
   artifactName: ${name}-${version}-linux-${arch}.${ext}
   category: Development
   maintainer: dsh-desktop
-# electron-builder 26：Ubuntu 24 CI 上构建 AppImage 需要 fuse2（或升级到 27 默认 static runtime）
-# 这里不强制 toolsets，由 workflow 安装 libfuse2。
