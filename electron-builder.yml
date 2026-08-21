@@ -29,6 +29,7 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
 mac:
+  # 默认跟 CI runner 架构走；双架构用 dist:mac:arm64 / dist:mac:x64 分打
   target:
     - dmg
     - zip

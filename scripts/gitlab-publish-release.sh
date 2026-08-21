@@ -7,10 +7,10 @@ mkdir -p upload
 rm -f links.raw
 
 shopt -s nullglob
+# 只上传安装包（不要 blockmap / latest*.yml）
 for f in release/dsh-desktop-*.exe release/dsh-desktop-*.zip \
   release/dsh-desktop-*.dmg release/dsh-desktop-*.AppImage \
-  release/dsh-desktop-*.deb release/*.blockmap \
-  release/latest*.yml release/latest*.yaml; do
+  release/dsh-desktop-*.deb; do
   [ -f "$f" ] || continue
   cp -v "$f" upload/
 done

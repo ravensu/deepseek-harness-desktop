@@ -21,6 +21,8 @@
     "dist": "node scripts/dist.cjs",
     "dist:win": "node scripts/dist.cjs --win",
     "dist:mac": "node scripts/dist.cjs --mac",
+    "dist:mac:arm64": "node scripts/dist.cjs --mac --arm64",
+    "dist:mac:x64": "node scripts/dist.cjs --mac --x64",
     "dist:linux": "node scripts/dist.cjs --linux"
   },
   "devDependencies": {

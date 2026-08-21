@@ -112,18 +112,29 @@ jobs:
           echo "::group::release tree"
           find release -maxdepth 2 -type f | sort || true
           echo "::endgroup::"
-          if ! find release -maxdepth 1 -type f -name 'dsh-desktop-*' | grep -q .; then
-            echo "release/ 下没有 dsh-desktop-* 安装包" >&2
+          # 只认安装包，忽略 blockmap / latest*.yml
+          mapfile -t packs < <(find release -maxdepth 1 -type f \( \
+            -name 'dsh-desktop-*.exe' -o \
+            -name 'dsh-desktop-*.zip' -o \
+            -name 'dsh-desktop-*.dmg' -o \
+            -name 'dsh-desktop-*.AppImage' -o \
+            -name 'dsh-desktop-*.deb' \))
+          if [ "${#packs[@]}" -lt 1 ]; then
+            echo "release/ 下没有安装包" >&2
             exit 1
           fi
+          printf '%s\n' "${packs[@]}"
 
       - name: Upload ${{ inputs.platform }} artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifact_name }}
+          # 只上传安装包，不带 blockmap / latest*.yml
           path: |
-            release/dsh-desktop-*.*
-            release/latest*.yml
-            release/*.blockmap
+            release/dsh-desktop-*.exe
+            release/dsh-desktop-*.zip
+            release/dsh-desktop-*.dmg
+            release/dsh-desktop-*.AppImage
+            release/dsh-desktop-*.deb
           if-no-files-found: error
           retention-days: ${{ inputs.retention_days }}

@@ -1,6 +1,6 @@
 name: Package
 
-# 手动或相关变更推到 main → 按 Win → mac → Linux 串行打包（仅 Artifact）
+# 手动或相关变更推到 main → 按 Win → mac(arm64) → mac(x64) → Linux 串行打包
 on:
   workflow_dispatch:
   push:
@@ -33,20 +33,31 @@ jobs:
       artifact_name: dsh-desktop-win-${{ github.sha }}
       retention_days: 14
 
-  mac:
-    name: macOS
+  mac-arm64:
+    name: macOS (Apple Silicon)
     needs: win
     uses: ./.github/workflows/build-platform.yml
     with:
-      platform: mac
+      platform: mac-arm64
       os: macos-latest
-      script: dist:mac
-      artifact_name: dsh-desktop-mac-${{ github.sha }}
+      script: dist:mac:arm64
+      artifact_name: dsh-desktop-mac-arm64-${{ github.sha }}
+      retention_days: 14
+
+  mac-x64:
+    name: macOS (Intel)
+    needs: mac-arm64
+    uses: ./.github/workflows/build-platform.yml
+    with:
+      platform: mac-x64
+      os: macos-13
+      script: dist:mac:x64
+      artifact_name: dsh-desktop-mac-x64-${{ github.sha }}
       retention_days: 14
 
   linux:
     name: Linux
-    needs: mac
+    needs: mac-x64
     uses: ./.github/workflows/build-platform.yml
     with:
       platform: linux
