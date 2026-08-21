@@ -10,4 +10,6 @@ plugins/harness/dsh-my-feature/
   lib/client.js         # 可选，设置页 UI
 ```
 
+现有：`dsh-cost-meter`（统计栏费用估算；设置页可勾选字段并拖放排序）。
+
 用 `pnpm plugin:link` 链到当前 profile 的 `node_modules` 并写入 `dsh.profile.bundles`。

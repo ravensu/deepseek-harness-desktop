@@ -19,7 +19,7 @@
     "stage:harness": "node scripts/stage-harness.cjs",
     "prestart": "node scripts/ensure-harness-staged.cjs",
     "start": "electron .",
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/*.test.js plugins/harness/dsh-cost-meter/test/*.test.js",
     "smoke:runtime": "node scripts/smoke-runtime.cjs",
     "plugin:link": "node scripts/link-harness-plugins.cjs",
     "sync:version": "node scripts/sync-version-from-ci.cjs",

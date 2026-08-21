@@ -1,0 +1,4 @@
+# Inserts the dual-face plugin: host registers `costMeter`, client loads /plugins/dsh-cost-meter/client.js
+- insert:
+    - id: cost-meter
+      name: dsh-cost-meter

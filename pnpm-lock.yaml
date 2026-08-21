@@ -27,6 +27,8 @@ importers:
 
   plugins/desktop/dsh-desktop-core: {}
 
+  plugins/harness/dsh-cost-meter: {}
+
 packages:
 
   '@electron/asar@3.2.1':
