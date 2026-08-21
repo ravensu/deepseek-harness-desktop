@@ -1,6 +1,6 @@
 name: Release
 
-# 推送 v* tag → 三端打包并发布 GitHub Release
+# 推送 v* tag → 按 Win → mac → Linux 串行打包，再发 GitHub Release
 on:
   push:
     tags:
@@ -24,124 +24,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: win
-            script: dist:win
-          - os: macos-latest
-            platform: mac
-            script: dist:mac
-          - os: ubuntu-22.04
-            platform: linux
-            script: dist:linux
+  win:
+    name: Windows
+    uses: ./.github/workflows/build-platform.yml
+    with:
+      platform: win
+      os: windows-latest
+      script: dist:win
+      artifact_name: dsh-desktop-win
+      retention_days: 30
 
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    env:
-      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
-      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+  mac:
+    name: macOS
+    needs: win
+    uses: ./.github/workflows/build-platform.yml
+    with:
+      platform: mac
+      os: macos-latest
+      script: dist:mac
+      artifact_name: dsh-desktop-mac
+      retention_days: 30
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Cache Electron
-        uses: actions/cache@v4
-        with:
-          path: |
-            .cache/electron
-            .cache/electron-builder
-          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'package.json') }}
-          restore-keys: |
-            electron-${{ runner.os }}-
-
-      - name: Install Linux packaging deps
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libfuse2 \
-            fakeroot \
-            dpkg \
-            rpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Test
-        run: pnpm test
-
-      - name: Build ${{ matrix.platform }}
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm ${{ matrix.script }} 2>&1 | tee "${RUNNER_TEMP}/dsh-build.log"
-
-      - name: Surface build failure
-        if: failure()
-        shell: bash
-        run: |
-          log="${RUNNER_TEMP}/dsh-build.log"
-          {
-            echo "## Build failure (${{ matrix.platform }})"
-            echo
-            echo '```'
-            if [ -f "$log" ]; then tail -n 120 "$log"; else echo "(no build log)"; fi
-            echo '```'
-            echo
-            echo '### release/'
-            echo '```'
-            find release -maxdepth 3 \( -type f -o -type d \) 2>/dev/null | sort || true
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [ -f "$log" ]; then
-            grep -E '⨯|Error:|ELIFECYCLE|ENOENT|Cannot find|missing|afterPack:|pack smoke:|stage-node:' "$log" \
-              | tail -n 30 \
-              | while IFS= read -r line; do
-                  echo "::error::${line}"
-                done
-          fi
-
-      - name: Verify release artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "::group::release tree"
-          find release -maxdepth 2 -type f | sort || true
-          echo "::endgroup::"
-          if ! find release -maxdepth 1 -type f -name 'dsh-desktop-*' | grep -q .; then
-            echo "release/ 下没有 dsh-desktop-* 安装包" >&2
-            exit 1
-          fi
-
-      - name: Upload ${{ matrix.platform }} artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dsh-desktop-${{ matrix.platform }}
-          path: |
-            release/dsh-desktop-*.*
-            release/latest*.yml
-            release/*.blockmap
-          if-no-files-found: error
-          retention-days: 30
+  linux:
+    name: Linux
+    needs: mac
+    uses: ./.github/workflows/build-platform.yml
+    with:
+      platform: linux
+      os: ubuntu-22.04
+      script: dist:linux
+      artifact_name: dsh-desktop-linux
+      retention_days: 30
 
   publish:
     name: Publish GitHub Release
-    needs: build
+    needs: [win, mac, linux]
     runs-on: ubuntu-latest
     if: >
       startsWith(github.ref, 'refs/tags/v') ||
@@ -150,7 +67,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download all platform artifacts
+      - name: Download available platform artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist-artifacts

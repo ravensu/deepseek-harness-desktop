@@ -12,9 +12,12 @@
 #   Linux — shared runner
 #   Windows / macOS — 自备 runner，并打 tags: windows / macos
 
+# 打包优先级：Windows → macOS → Linux（串行，前一失败则后续不跑）
 stages:
   - test
-  - build
+  - build-win
+  - build-mac
+  - build-linux
   - release
 
 variables:
@@ -47,24 +50,8 @@ test:
     - if: $CI_COMMIT_BRANCH
     - if: $CI_COMMIT_TAG
 
-build:linux:
-  extends: .pnpm_linux
-  stage: build
-  needs: [test]
-  script:
-    - pnpm dist:linux
-  artifacts:
-    name: ${PACKAGE_NAME}-linux-${CI_COMMIT_REF_SLUG}
-    paths:
-      - release/
-    expire_in: 14 days
-  rules:
-    - if: $CI_COMMIT_TAG =~ /^v/
-    - if: $CI_PIPELINE_SOURCE == "web"
-    - if: $CI_COMMIT_BRANCH && $ENABLE_LINUX_BUILD == "1"
-
 build:windows:
-  stage: build
+  stage: build-win
   needs: [test]
   tags: [windows]
   variables:
@@ -87,8 +74,11 @@ build:windows:
   allow_failure: true
 
 build:macos:
-  stage: build
-  needs: [test]
+  stage: build-mac
+  needs:
+    - job: test
+    - job: build:windows
+      optional: true
   tags: [macos]
   variables:
     CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -108,6 +98,27 @@ build:macos:
     - if: $CI_PIPELINE_SOURCE == "web" && $ENABLE_MAC_BUILD == "1"
     - when: never
   allow_failure: true
+
+build:linux:
+  extends: .pnpm_linux
+  stage: build-linux
+  needs:
+    - job: test
+    - job: build:windows
+      optional: true
+    - job: build:macos
+      optional: true
+  script:
+    - pnpm dist:linux
+  artifacts:
+    name: ${PACKAGE_NAME}-linux-${CI_COMMIT_REF_SLUG}
+    paths:
+      - release/
+    expire_in: 14 days
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_BRANCH && $ENABLE_LINUX_BUILD == "1"
 
 release:
   stage: release
