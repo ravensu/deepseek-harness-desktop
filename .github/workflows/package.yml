@@ -1,6 +1,6 @@
 name: Package
 
-# 手动或推送后打 Win / macOS / Linux 三端产物（上传 Artifact，默认不发 Release）
+# 手动或相关变更推到 main → 打 Win / macOS / Linux 三端产物（仅 Artifact）
 on:
   workflow_dispatch:
   push:
@@ -30,28 +30,12 @@ jobs:
           - os: windows-latest
             platform: win
             script: dist:win
-            artifact_glob: |
-              release/dsh-desktop-*-win-*.exe
-              release/dsh-desktop-*-win-*.zip
-              release/*-win-*.blockmap
-              release/latest.yml
           - os: macos-latest
             platform: mac
             script: dist:mac
-            artifact_glob: |
-              release/dsh-desktop-*-mac-*.dmg
-              release/dsh-desktop-*-mac-*.zip
-              release/*-mac-*.blockmap
-              release/latest-mac.yml
           - os: ubuntu-22.04
             platform: linux
             script: dist:linux
-            artifact_glob: |
-              release/dsh-desktop-*-linux-*.AppImage
-              release/dsh-desktop-*-linux-*.deb
-              release/dsh-desktop-*-linux-*.zip
-              release/*-linux-*.blockmap
-              release/latest-linux.yml
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -102,17 +86,26 @@ jobs:
       - name: Build ${{ matrix.platform }}
         run: pnpm ${{ matrix.script }}
 
-      - name: List release outputs
+      - name: Verify release artifacts
         shell: bash
         run: |
-          echo "::group::release/"
+          set -euo pipefail
+          echo "::group::release tree"
           find release -maxdepth 2 -type f | sort || true
           echo "::endgroup::"
+          if ! find release -maxdepth 1 -type f -name 'dsh-desktop-*' | grep -q .; then
+            echo "release/ 下没有 dsh-desktop-* 安装包" >&2
+            exit 1
+          fi
 
       - name: Upload ${{ matrix.platform }} artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dsh-desktop-${{ matrix.platform }}-${{ github.sha }}
-          path: ${{ matrix.artifact_glob }}
+          # 多行 path 必须写在 step 里，不要从 matrix 传入（否则会变成单行空格拼接）
+          path: |
+            release/dsh-desktop-*.*
+            release/latest*.yml
+            release/*.blockmap
           if-no-files-found: error
           retention-days: 14

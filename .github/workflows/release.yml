@@ -1,7 +1,6 @@
 name: Release
 
 # 推送 v* tag → 三端打包并发布 GitHub Release
-# 也可手动 Run workflow（勾选 publish_release 并填写 release_tag）
 on:
   push:
     tags:
@@ -33,28 +32,12 @@ jobs:
           - os: windows-latest
             platform: win
             script: dist:win
-            artifact_glob: |
-              release/dsh-desktop-*-win-*.exe
-              release/dsh-desktop-*-win-*.zip
-              release/*-win-*.blockmap
-              release/latest.yml
           - os: macos-latest
             platform: mac
             script: dist:mac
-            artifact_glob: |
-              release/dsh-desktop-*-mac-*.dmg
-              release/dsh-desktop-*-mac-*.zip
-              release/*-mac-*.blockmap
-              release/latest-mac.yml
           - os: ubuntu-22.04
             platform: linux
             script: dist:linux
-            artifact_glob: |
-              release/dsh-desktop-*-linux-*.AppImage
-              release/dsh-desktop-*-linux-*.deb
-              release/dsh-desktop-*-linux-*.zip
-              release/*-linux-*.blockmap
-              release/latest-linux.yml
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -105,18 +88,26 @@ jobs:
       - name: Build ${{ matrix.platform }}
         run: pnpm ${{ matrix.script }}
 
-      - name: List release outputs
+      - name: Verify release artifacts
         shell: bash
         run: |
-          echo "::group::release/"
+          set -euo pipefail
+          echo "::group::release tree"
           find release -maxdepth 2 -type f | sort || true
           echo "::endgroup::"
+          if ! find release -maxdepth 1 -type f -name 'dsh-desktop-*' | grep -q .; then
+            echo "release/ 下没有 dsh-desktop-* 安装包" >&2
+            exit 1
+          fi
 
       - name: Upload ${{ matrix.platform }} artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dsh-desktop-${{ matrix.platform }}
-          path: ${{ matrix.artifact_glob }}
+          path: |
+            release/dsh-desktop-*.*
+            release/latest*.yml
+            release/*.blockmap
           if-no-files-found: error
           retention-days: 30
 
@@ -139,7 +130,6 @@ jobs:
           merge-multiple: true
 
       - name: Collect release files
-        id: files
         shell: bash
         run: |
           set -euo pipefail
