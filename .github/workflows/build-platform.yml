@@ -112,18 +112,24 @@ jobs:
           echo "::group::release tree"
           find release -maxdepth 2 -type f | sort || true
           echo "::endgroup::"
-          # 安装包 + electron-updater 元数据（latest*.yml / blockmap）
+          # 用 glob，不用 find+进程替换：
+          # - macOS bash 3.2 没有 mapfile
+          # - Git Bash on windows-latest 的 < <(find …) 会偶发以
+          #   STATUS_SINGLE_STEP（exit -2147483644）崩溃，尽管 NSIS/zip 已在 release/
           packs=()
-          while IFS= read -r f; do
+          for f in \
+            release/dsh-desktop-*.exe \
+            release/dsh-desktop-*.zip \
+            release/dsh-desktop-*.dmg \
+            release/dsh-desktop-*.AppImage \
+            release/dsh-desktop-*.deb
+          do
+            [ -f "$f" ] || continue
             packs+=("$f")
-          done < <(find release -maxdepth 1 -type f \( \
-            -name 'dsh-desktop-*.exe' -o \
-            -name 'dsh-desktop-*.zip' -o \
-            -name 'dsh-desktop-*.dmg' -o \
-            -name 'dsh-desktop-*.AppImage' -o \
-            -name 'dsh-desktop-*.deb' \) | sort)
+          done
           if [ "${#packs[@]}" -lt 1 ]; then
             echo "release/ 下没有安装包" >&2
+            ls -la release || true
             exit 1
           fi
           printf '%s\n' "${packs[@]}"
