@@ -102,8 +102,12 @@ function bootstrapNodeBinary() {
   if (process.env.DSH_BOOTSTRAP_NODE && fs.existsSync(process.env.DSH_BOOTSTRAP_NODE)) {
     return process.env.DSH_BOOTSTRAP_NODE;
   }
-  const bundled = nodePathIn(bootstrapNodeRoot());
-  if (fs.existsSync(bundled)) return bundled;
+  const root = bootstrapNodeRoot();
+  // Packaged bootstrap-node is flat (node.exe next to pnpm/). Sidecar uses node/node.exe.
+  const candidates = [nodePathIn(root), path.join(root, nodeBinaryName())];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
   const current = nodePathIn(harnessRoot());
   if (fs.existsSync(current)) return current;
   const seed = nodePathIn(harnessSeedRoot());
