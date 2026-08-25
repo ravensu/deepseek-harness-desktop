@@ -1,0 +1,4 @@
+# Inserts the dual-face plugin: host runs the IM gateway, client loads /plugins/dsh-im-gateway/client.js
+- insert:
+    - id: im-gateway
+      name: dsh-im-gateway

@@ -20,16 +20,24 @@ plugins/
 ## harness（纯 dsh）
 
 - 路径：`plugins/harness/<package-name>/`
-- **不**打进 Electron 安装包；开发时链到当前 `DSH_HOME` profile，或以后发 npm 再 `dsh plugin add`
+- 安装包可带一份副本；开发时用 junction 链到本仓库，已安装的 DSH 就能直接测
 - 不要 `require('electron')`，不要假设 `window.dshDesktop` 存在
 
-开发链接：
+边写边测：
 
 ```powershell
-# 默认链到桌面壳数据目录下的 web profile
+# 链到已安装 DeepSeek Harness 的 web profile（打印出的 DSH_HOME 应是 AppData\Roaming\DeepSeek Harness\dsh-home）
 pnpm plugin:link
 
-# 或指定 DSH_HOME
+# 开发期间保持链接
+pnpm plugin:dev
+```
+
+改 `lib/client.js` 后在 DSH 窗口 Ctrl+R；改 `lib/index.js` 后重启 DeepSeek Harness。
+
+指定别的数据目录：
+
+```powershell
 $env:DSH_HOME = 'D:\path\to\dsh-home'
 pnpm plugin:link
 ```

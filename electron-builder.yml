@@ -20,6 +20,12 @@ files:
   - src/**/*
   - plugins/desktop/**/*
   - "!**/{README,CHANGELOG,CHANGES,changelog,readme}*"
+extraResources:
+  - from: plugins/harness
+    to: plugins/harness
+    filter:
+      - "**/*"
+      - "!**/test/**"
 win:
   target:
     - nsis

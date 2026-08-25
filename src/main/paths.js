@@ -292,13 +292,29 @@ function resolveDshEntry() {
   return resolveDshEntryIn(root);
 }
 
+function guessInstalledDshHome() {
+  const roaming = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+  const names = ['DeepSeek Harness', 'dsh-desktop'];
+  for (const name of names) {
+    const home = path.join(roaming, name, 'dsh-home');
+    if (fs.existsSync(home)) return home;
+  }
+  return null;
+}
+
 function dshHome() {
+  if (process.env.DSH_HOME && process.env.DSH_HOME.trim()) {
+    return path.resolve(process.env.DSH_HOME.trim());
+  }
   try {
     const { app } = require('electron');
-    return process.env.DSH_HOME || path.join(app.getPath('userData'), 'dsh-home');
+    if (app && typeof app.getPath === 'function' && (!app.isReady || app.isReady())) {
+      return path.join(app.getPath('userData'), 'dsh-home');
+    }
   } catch {
-    return process.env.DSH_HOME || path.join(os.tmpdir(), 'dsh-desktop-home');
+    /* CLI / tests without Electron */
   }
+  return guessInstalledDshHome() || path.join(os.tmpdir(), 'dsh-desktop-home');
 }
 
 function workspaceDir(home) {
@@ -356,6 +372,7 @@ module.exports = {
   resolveNode,
   resolveDshEntry,
   dshHome,
+  guessInstalledDshHome,
   workspaceDir,
   withLocalBins,
   readShellManifest,

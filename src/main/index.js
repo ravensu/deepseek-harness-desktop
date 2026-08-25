@@ -11,7 +11,7 @@ const {
   isUpdateInFlight,
 } = require('./update');
 const { cleanupHarnessArtifacts } = require('./layout');
-const { ensureDesktopPlugins } = require('./ensure-plugin');
+const { ensureDesktopPlugins, ensureHarnessPlugins } = require('./ensure-plugin');
 const { createCoreBridge } = require('./core-bridge');
 const {
   shellUpdateStatus,
@@ -91,6 +91,34 @@ function runtimeOptions() {
   return { nodePath, dshEntry, dshHome: home, cwd, env };
 }
 
+function logPluginSync(kind, pluginResult) {
+  if (pluginResult.sourceRoot) {
+    pushLog({
+      stream: 'system',
+      line: `${kind}插件目录: ${pluginResult.sourceRoot}`,
+    });
+  }
+  if (pluginResult.ok) {
+    const changed = (pluginResult.results || []).filter((r) => r.changed);
+    for (const r of changed) {
+      pushLog({
+        stream: 'system',
+        line: `已同步${kind}插件 ${r.plugin}@${r.version}`,
+      });
+    }
+    if (!changed.length && pluginResult.results?.length) {
+      pushLog({
+        stream: 'system',
+        line: `${kind}插件已就绪：${pluginResult.results.map((r) => r.plugin).join(', ')}`,
+      });
+    }
+    return;
+  }
+  for (const f of pluginResult.failed || []) {
+    pushLog({ stream: 'stderr', line: `${kind}插件同步失败: ${f.reason || f.plugin}` });
+  }
+}
+
 async function createRuntime() {
   sendStatus({ phase: 'starting', message: '正在检查 Harness 运行时…' });
   await ensureHarnessReadyAsync(
@@ -103,26 +131,8 @@ async function createRuntime() {
       sendUpdateLog(entry);
     },
   );
-  const pluginResult = ensureDesktopPlugins(dshHome());
-  if (pluginResult.ok) {
-    const changed = (pluginResult.results || []).filter((r) => r.changed);
-    for (const r of changed) {
-      pushLog({
-        stream: 'system',
-        line: `已同步桌面插件 ${r.plugin}@${r.version}`,
-      });
-    }
-    if (!changed.length && pluginResult.results?.length) {
-      pushLog({
-        stream: 'system',
-        line: `桌面插件已就绪：${pluginResult.results.map((r) => r.plugin).join(', ')}`,
-      });
-    }
-  } else {
-    for (const f of pluginResult.failed || []) {
-      pushLog({ stream: 'stderr', line: `桌面插件同步失败: ${f.reason || f.plugin}` });
-    }
-  }
+  logPluginSync('桌面', ensureDesktopPlugins(dshHome()));
+  logPluginSync('Harness', ensureHarnessPlugins(dshHome()));
   const options = runtimeOptions();
   harness = new HarnessSupervisor(options);
 
