@@ -1,0 +1,14 @@
+---
+description: 发版只上传代码，打 tag 和跟 GitHub Release 用 Cloud Agent
+alwaysApply: true
+---
+
+# 发版
+
+用户说「发版 / 上传 / release」时：
+
+1. 本地：测过 → 提交 → 推 `origin main`。不要本地打 `v*` tag。
+2. 发版：派 Cloud Agent（`Task` `environment=cloud`）打下一个 `v*` tag、跟 `.github/workflows/release.yml`、失败再修再打新 tag。
+3. 不要 force push `main`；不要本机 `pnpm dist*` 当正式发版。
+
+细节见 `.cursor/skills/dsh-desktop-release/SKILL.md`。
