@@ -1,5 +1,5 @@
 ---
-description: 发版只上传代码，打 tag 和跟 GitHub Release 用 Cloud Agent
+description: 发版只上传代码，push main 后 CI 自动打 tag 并发 GitHub Release
 alwaysApply: true
 ---
 
@@ -8,7 +8,10 @@ alwaysApply: true
 用户说「发版 / 上传 / release」时：
 
 1. 本地：测过 → 提交 → 推 `origin main`。不要本地打 `v*` tag。
-2. 发版：派 Cloud Agent（`Task` `environment=cloud`）打下一个 `v*` tag、跟 `.github/workflows/release.yml`、失败再修再打新 tag。
-3. 不要 force push `main`；不要本机 `pnpm dist*` 当正式发版。
+2. push main 触发 Package workflow：四端打包成功后自动打下一个 `v*` patch tag（同一 commit 重跑幂等复用）。
+3. tag 触发 Release workflow：四端正式打包 + 发布 GitHub Release（含 `latest*.yml`，electron-updater 会广播给所有旧壳）。
+4. 注意：凡是命中 package.yml paths（src/**、scripts/**、plugins/** 等）的 push 都会发新版并推送给全部用户，文档类改动不会触发。
+5. 失败处理：Package 红 → 修 workflow/脚本推 main 重跑；Release 红 → 修复推 main 后手动补打下一个 tag（不要 force push 已发布的 tag / main）。
+6. 不要本机 `pnpm dist*` 当正式发版。
 
 细节见 `.cursor/skills/dsh-desktop-release/SKILL.md`。

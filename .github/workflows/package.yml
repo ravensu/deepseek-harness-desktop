@@ -63,3 +63,55 @@ jobs:
       script: dist:linux
       artifact_name: dsh-desktop-linux-${{ github.sha }}
       retention_days: 14
+
+  # 四端打包成功后自动打下一个 v* patch tag 并推送；
+  # tag 触发 release.yml 完成正式 GitHub Release（含 latest*.yml / electron-updater）。
+  # release.yml 自身不打 tag，不会循环。
+  tag-release:
+    name: Tag next release
+    needs: [win, mac-arm64, mac-x64, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute and push next patch tag
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin --tags --force
+          # 幂等：当前 commit 已发过正式版就直接复用，重跑不再发新版
+          existing=$(git tag -l 'v*' --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+          if [ -n "${existing}" ]; then
+            echo "HEAD 已有正式 tag ${existing}，跳过打 tag"
+            echo "tag=${existing}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # 只认正式版 tag（vX.Y.Z），忽略 -rc 等预发布
+          latest=$(git tag -l 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+          if [ -z "${latest}" ]; then
+            latest="v0.0.0"
+          fi
+          base="${latest#v}"
+          major="${base%%.*}"
+          rest="${base#*.}"
+          minor="${rest%%.*}"
+          patch="${rest#*.}"
+          next="v${major}.${minor}.$((patch + 1))"
+          echo "latest=${latest} next=${next}"
+          if git rev-parse -q --verify "refs/tags/${next}" >/dev/null; then
+            echo "tag ${next} 已存在，跳过（可能已发过版）"
+            echo "tag=${next}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # lightweight tag 不需要 git identity
+          git tag "${next}"
+          git push origin "${next}"
+          echo "tag=${next}" >> "$GITHUB_OUTPUT"
