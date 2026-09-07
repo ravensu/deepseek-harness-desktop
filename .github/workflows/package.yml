@@ -73,6 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
@@ -115,3 +116,15 @@ jobs:
           git tag "${next}"
           git push origin "${next}"
           echo "tag=${next}" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch Release workflow for the tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # GITHUB_TOKEN 推送的 tag 不会触发 on:push workflows（GitHub 防递归），
+          # 必须显式 dispatch release.yml 来完成正式打包与发布。
+          gh workflow run release.yml --ref "${TAG}" -f publish_release=true
+          echo "已触发 Release workflow on ${TAG}"

@@ -26,7 +26,7 @@ push main 命中 package.yml 的 paths（src/**、scripts/**、plugins/** 等）
 2. 四端全绿 → `tag-release` job 自动打下一个 `v*` patch tag 并推送
    - 只认正式版 tag `vX.Y.Z`，忽略 `-rc` 预发布
    - 幂等：当前 commit 已有正式 tag 时跳过，重跑同一 run 不会重复发版
-3. tag push 触发 Release workflow：四端正式打包（版本号由 `sync-version-from-ci.cjs` 按 tag 写入）→ Publish GitHub Release（安装包 + `latest*.yml`）
+3. Package 随后用 `gh workflow run release.yml --ref <tag> -f publish_release=true` 显式 dispatch Release workflow（`GITHUB_TOKEN` 推送的 tag 不会触发 on:push，GitHub 防递归机制，必须 dispatch）：四端正式打包（版本号由 `sync-version-from-ci.cjs` 按 tag 写入）→ Publish GitHub Release（安装包 + `latest*.yml`）
 4. 旧壳通过 electron-updater 自动检测到新版本
 
 ## 失败处理
